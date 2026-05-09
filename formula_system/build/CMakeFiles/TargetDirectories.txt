@@ -1,0 +1,3 @@
+/home/ivan/Projects/LZ3_/Comp_algebra_system/formula_system/build/CMakeFiles/formula_demo.dir
+/home/ivan/Projects/LZ3_/Comp_algebra_system/formula_system/build/CMakeFiles/edit_cache.dir
+/home/ivan/Projects/LZ3_/Comp_algebra_system/formula_system/build/CMakeFiles/rebuild_cache.dir
