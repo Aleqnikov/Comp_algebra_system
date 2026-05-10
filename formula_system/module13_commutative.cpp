@@ -1,8 +1,8 @@
 #include "module13_commutative.h"
+#include "rational_utils.h"
 #include <algorithm>
 #include <vector>
 
-// Категория множителя для сортировки
 static int factorCategory(const NodePtr& n) {
     switch (n->type) {
         case NodeType::NUMBER:   return 0;
@@ -17,23 +17,20 @@ static int factorCategory(const NodePtr& n) {
     }
 }
 
-// Лексикографическое имя для сравнения внутри категории
 static std::string factorKey(const NodePtr& n) {
     if (n->type == NodeType::VARIABLE) return n->varName;
     if (n->type == NodeType::SQRT && !n->children.empty() &&
         n->children[0]->type == NodeType::VARIABLE)
-        return n->children[0]->varName; // рядом со своей переменной
+        return n->children[0]->varName;
     return "";
 }
 
 static bool factorLess(const NodePtr& a, const NodePtr& b) {
     int ca = factorCategory(a), cb = factorCategory(b);
     if (ca != cb) return ca < cb;
-    // Внутри категории: переменные и sqrt лексикографически
     return factorKey(a) < factorKey(b);
 }
 
-// Собрать плоский список множителей из цепочки MUL
 static void flattenMul(const NodePtr& node, std::vector<NodePtr>& factors) {
     if (node->type == NodeType::MUL) {
         flattenMul(node->children[0], factors);
@@ -54,18 +51,34 @@ static NodePtr buildMul(const std::vector<NodePtr>& v) {
 NodePtr sortFactors(const NodePtr& node) {
     if (!node) return node;
 
-    // Рекурсивно
     NodePtr r = cloneTree(node);
     for (auto& c : r->children) c = sortFactors(c);
 
     if (r->type != NodeType::MUL) return r;
 
-    // Собираем плоский список
     std::vector<NodePtr> factors;
     flattenMul(r, factors);
 
-    // Сортируем устойчиво
-    std::stable_sort(factors.begin(), factors.end(), factorLess);
+    // Свернуть все числовые константы в одну
+    Rational combined("1");
+    std::vector<NodePtr> nonNumbers;
+    for (auto& f : factors) {
+        if (f->type == NodeType::NUMBER) {
+            combined = combined * f->value;
+        } else {
+            nonNumbers.push_back(f);
+        }
+    }
+    combined.reduce();
 
-    return buildMul(factors);
+    // Сортируем нечисловые множители
+    std::stable_sort(nonNumbers.begin(), nonNumbers.end(), factorLess);
+
+    // Собираем: число впереди (если не 1)
+    std::vector<NodePtr> result;
+    if (!rationalIsOne(combined))
+        result.push_back(FormulaNode::makeNumber(combined));
+    result.insert(result.end(), nonNumbers.begin(), nonNumbers.end());
+
+    return buildMul(result);
 }

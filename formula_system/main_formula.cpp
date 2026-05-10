@@ -55,6 +55,10 @@ void demo(const std::string& expr) {
     NodePtr simplified = simplifyTree(diff);
     std::cout << "[М9] Упрощ:     " << treeToStringPriority(simplified) << "\n";
 
+    // М9+М12 комбо
+    NodePtr simplLike = simplifyTree(collectLikeTerms(simplified));
+    std::cout << "[М9+М12]:       " << treeToStringPriority(simplLike) << "\n";
+
     // М12 — подобные слагаемые по дереву
     NodePtr like = collectLikeTerms(tree);
     std::cout << "[М12] Подобные: " << treeToStringPriority(like) << "\n";
@@ -71,6 +75,23 @@ int main() {
         demo("x*sin(x)*2*3");
         demo("(x+0)*(1*y)");
         demo("log(2,x)+x^2-x^2");
+
+        // Прямые тесты М10 и М11 по постфиксу (без дерева)
+        std::cout << "\n=== Прямые тесты М10/М11 (без дерева) ===\n";
+        struct PTest { std::string name, postfix; };
+        std::vector<PTest> ptests = {
+            {"x+0",         "x 0 +"},
+            {"1*y",         "1 y *"},
+            {"3*x+5*x+2*y", "3 x * 5 x * + 2 y * +"},
+            {"x^2-x^2",     "x 2 ^ x 2 ^ -"},
+            {"0*sin(x)+y*1","0 x sin * y 1 * +"},
+        };
+        for (auto& t : ptests) {
+            auto pf = splitPostfix(t.postfix);
+            std::cout << "\nПостфикс: " << t.postfix << "\n";
+            std::cout << "[М10]: " << simplifyPostfixStr(t.postfix) << "\n";
+            std::cout << "[М11]: " << collectLikeTermsPostfixStr(t.postfix) << "\n";
+        }
     } catch (const std::exception& e) {
         std::cerr << "Ошибка: " << e.what() << "\n";
     }

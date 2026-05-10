@@ -47,6 +47,28 @@ static NodePtr simplifyOnce(const NodePtr& node) {
         sameTree(result->children[0], result->children[1]))
         return N("0");
 
+    // Протаскивание констант: (expr * C1) * C2 → expr * (C1*C2)
+    // и C1 * (C2 * expr) → (C1*C2) * expr
+    if (result->type == NodeType::MUL) {
+        NodePtr l = result->children[0], r = result->children[1];
+        // (A * C1) * C2 → A * (C1*C2)
+        if (r->type == NodeType::NUMBER && l->type == NodeType::MUL &&
+            l->children[1]->type == NodeType::NUMBER) {
+            Rational merged = l->children[1]->value * r->value;
+            merged.reduce();
+            return simplifyOnce(FormulaNode::makeBinary(NodeType::MUL,
+                l->children[0], FormulaNode::makeNumber(merged)));
+        }
+        // C1 * (C2 * A) → (C1*C2) * A
+        if (l->type == NodeType::NUMBER && r->type == NodeType::MUL &&
+            r->children[0]->type == NodeType::NUMBER) {
+            Rational merged = l->value * r->children[0]->value;
+            merged.reduce();
+            return simplifyOnce(FormulaNode::makeBinary(NodeType::MUL,
+                FormulaNode::makeNumber(merged), r->children[1]));
+        }
+    }
+
     if (result->type == NodeType::ADD) {
         if (isZero(result->children[0])) return result->children[1];
         if (isZero(result->children[1])) return result->children[0];
@@ -85,3 +107,4 @@ NodePtr simplifyTree(const NodePtr& node) {
     }
     return cur;
 }
+// ПРИМЕЧАНИЕ: функция уже определена выше через simplifyOnce + итерацию

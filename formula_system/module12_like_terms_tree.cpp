@@ -29,16 +29,27 @@ static std::pair<Rational, NodePtr> splitCoeff(const NodePtr& term) {
 
     if (term->type == NodeType::MUL) {
         NodePtr l = term->children[0], r = term->children[1];
-        if (l->type == NodeType::NUMBER)
-            return {l->value, r};
-        if (r->type == NodeType::NUMBER)
-            return {r->value, l};
+        if (l->type == NodeType::NUMBER) {
+            // l — число, рекурсивно разбираем r
+            auto [rc, rbody] = splitCoeff(r);
+            Rational combined = l->value * rc;
+            combined.reduce();
+            return {combined, rbody};
+        }
+        if (r->type == NodeType::NUMBER) {
+            auto [lc, lbody] = splitCoeff(l);
+            Rational combined = lc * r->value;
+            combined.reduce();
+            return {combined, lbody};
+        }
     }
 
     if (term->type == NodeType::NEG) {
         auto [c, body] = splitCoeff(term->children[0]);
         Integer neg_c = -c.getNumerator();
-        return {Rational(neg_c, c.getDenominator()), body};
+        Rational negR(neg_c, c.getDenominator());
+        negR.reduce();
+        return {negR, body};
     }
 
     return {Rational("1"), term};
@@ -55,8 +66,8 @@ static NodePtr buildFromTerms(const std::vector<NodePtr>& terms) {
 NodePtr collectLikeTerms(const NodePtr& node) {
     if (!node) return node;
 
-    // Рекурсивно обрабатываем не-ADD поддеревья
-    if (node->type != NodeType::ADD) {
+    // Рекурсивно обрабатываем не-ADD/SUB поддеревья
+    if (node->type != NodeType::ADD && node->type != NodeType::SUB) {
         NodePtr r = cloneTree(node);
         for (auto& c : r->children) c = collectLikeTerms(c);
         return r;
