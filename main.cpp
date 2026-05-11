@@ -1,19 +1,18 @@
-//
-// Панфилов Григорий Иванович 4385 создал эту программу!
-//
 #include <QApplication>
 #include <QWidget>
 #include <QHBoxLayout>
-#include <QTabWidget>
 #include <QVBoxLayout>
+#include <QTabWidget>
 #include <QPushButton>
 #include <QLabel>
 #include <QLineEdit>
-#include <QMessageBox>
 #include <QTextEdit>
+#include <QMessageBox>
 #include <QFile>
 #include <QDateTime>
-#include <QDir>
+#include <QScrollArea>
+#include <QGroupBox>
+#include <QSplitter>
 #include <QTextStream>
 
 #include "lib/src/Exceptions/UniversalStringException.h"
@@ -23,619 +22,415 @@
 #include "lib/src/algstructures/Rational.h"
 #include "lib/src/algstructures/Polynom.h"
 
+#include "formula_system/module01_to_prefix.h"
+#include "formula_system/module02_from_postfix.h"
+#include "formula_system/module03_diff.h"
+#include "formula_system/module04_tree_to_postfix.h"
+#include "formula_system/module05_postfix_to_str.h"
+#include "formula_system/module06_tree_to_str.h"
+#include "formula_system/module07_assoc.h"
+#include "formula_system/module08_priority.h"
+#include "formula_system/module09_simplify_tree.h"
+#include "formula_system/module10_simplify_postfix.h"
+#include "formula_system/module11_like_terms_postfix.h"
+#include "formula_system/module12_like_terms_tree.h"
+#include "formula_system/module13_commutative.h"
 
+// ── Темы ─────────────────────────────────────────────────────────────────────
 namespace Theme {
-    const QString light = R"(
-        QMainWindow, QWidget {
-            background-color: rgba(240,240,240,0.9); color: #333;
-        }
-        QPushButton {
-            background-color: #fff; color: #333; border: 1px solid #ccc;
-            border-radius: 4px; padding: 8px 16px; font-weight: bold;
-        }
-        QPushButton:hover  { background-color: #e6e6e6; border-color: #adadad; }
-        QPushButton:pressed{ background-color: #d4d4d4; }
-        QLineEdit, QTextEdit {
-            background-color: #fff; color: #333; border: 1px solid #ccc;
-            border-radius: 4px; padding: 6px; selection-background-color: #0078d4;
-        }
-        QLabel { background-color: transparent; color: #333; }
-        QTabWidget::pane  { border: 1px solid #ccc; background-color: #fff; }
-        QTabBar::tab {
-            background-color: #e6e6e6; color: #333; padding: 8px 16px;
-            border: 1px solid #ccc; border-bottom: none;
-            border-top-left-radius: 4px; border-top-right-radius: 4px;
-        }
-        QTabBar::tab:selected         { background-color: #fff; }
-        QTabBar::tab:hover:!selected  { background-color: #f0f0f0; }
-        QMessageBox        { background-color: #fff; color: #333; }
-        QMessageBox QLabel { color: #333; }
-    )";
-
-    const QString dark = R"(
-        QMainWindow, QWidget {
-            background-color: rgba(30,30,30,0.9); color: #fff;
-        }
-        QPushButton {
-            background-color: #2d2d30; color: #fff; border: 1px solid #3e3e42;
-            border-radius: 4px; padding: 8px 16px; font-weight: bold;
-        }
-        QPushButton:hover  { background-color: #38383c; border-color: #007acc; }
-        QPushButton:pressed{ background-color: #004578; }
-        QLineEdit, QTextEdit {
-            background-color: #252526; color: #fff; border: 1px solid #3e3e42;
-            border-radius: 4px; padding: 6px; selection-background-color: #0078d4;
-        }
-        QLabel { background-color: transparent; color: #fff; }
-        QTabWidget::pane  { border: 1px solid #3e3e42; background-color: #252526; }
-        QTabBar::tab {
-            background-color: #2d2d30; color: #fff; padding: 8px 16px;
-            border: 1px solid #3e3e42; border-bottom: none;
-            border-top-left-radius: 4px; border-top-right-radius: 4px;
-        }
-        QTabBar::tab:selected        { background-color: #252526; }
-        QTabBar::tab:hover:!selected { background-color: #38383c; }
-        QMessageBox        { background-color: #252526; color: #fff; }
-        QMessageBox QLabel { color: #fff; }
-    )";
+const QString dark = R"(
+    QWidget { background-color:#1e1e1e; color:#d4d4d4; }
+    QPushButton { background:#2d2d30; color:#d4d4d4; border:1px solid #3e3e42; border-radius:4px; padding:6px 14px; font-weight:bold; }
+    QPushButton:hover  { background:#38383c; border-color:#007acc; }
+    QPushButton:pressed{ background:#007acc; color:#fff; }
+    QLineEdit,QTextEdit { background:#252526; color:#d4d4d4; border:1px solid #3e3e42; border-radius:4px; padding:5px; }
+    QLabel { background:transparent; color:#d4d4d4; }
+    QTabWidget::pane { border:1px solid #3e3e42; background:#252526; }
+    QTabBar::tab { background:#2d2d30; color:#9e9e9e; padding:8px 20px; border:1px solid #3e3e42; border-bottom:none; border-top-left-radius:4px; border-top-right-radius:4px; }
+    QTabBar::tab:selected { background:#252526; color:#fff; }
+    QGroupBox { border:1px solid #3e3e42; border-radius:4px; margin-top:10px; padding-top:6px; color:#9cdcfe; font-weight:bold; }
+    QGroupBox::title { subcontrol-origin:margin; left:10px; }
+    QScrollArea { border:none; background:transparent; }
+    QSplitter::handle { background:#3e3e42; width:2px; }
+)";
+const QString light = R"(
+    QWidget { background-color:#f5f5f5; color:#333; }
+    QPushButton { background:#fff; color:#333; border:1px solid #ccc; border-radius:4px; padding:6px 14px; font-weight:bold; }
+    QPushButton:hover  { background:#e3f0fb; border-color:#0078d4; }
+    QPushButton:pressed{ background:#0078d4; color:#fff; }
+    QLineEdit,QTextEdit { background:#fff; color:#333; border:1px solid #ccc; border-radius:4px; padding:5px; }
+    QLabel { background:transparent; color:#333; }
+    QTabWidget::pane { border:1px solid #ccc; background:#fff; }
+    QTabBar::tab { background:#e6e6e6; color:#666; padding:8px 20px; border:1px solid #ccc; border-bottom:none; border-top-left-radius:4px; border-top-right-radius:4px; }
+    QTabBar::tab:selected { background:#fff; color:#0078d4; font-weight:bold; }
+    QGroupBox { border:1px solid #ccc; border-radius:4px; margin-top:10px; padding-top:6px; color:#0078d4; font-weight:bold; }
+    QGroupBox::title { subcontrol-origin:margin; left:10px; }
+    QScrollArea { border:none; background:transparent; }
+    QSplitter::handle { background:#ccc; width:2px; }
+)";
 }
 
-// ─────────────────────────────────────────────
-//  Структура модуля
-// ─────────────────────────────────────────────
-struct Module {
-    QString name;
-    QString category;
-    int     inputCount;
-    QString description;
-};
+static bool isDark = true;
+static void showErr(const std::string& m){ QMessageBox::critical(nullptr,"Ошибка",QString::fromStdString(m)); }
+static void setResult(QTextEdit* f,const std::string& s){ f->setPlainText(QString::fromStdString(s)); }
 
-// ─────────────────────────────────────────────
-//  Вспомогательные функции UI
-// ─────────────────────────────────────────────
-static void showError(const std::string& msg) {
-    QMessageBox::critical(nullptr, "Ошибка", QString::fromStdString(msg), QMessageBox::Ok);
-}
-
-static void showHelp(bool isDark) {
-    const QString helpText = R"(
-<h3>Общая информация</h3>
-<p>Программа предоставляет различные математические модули для работы с натуральными,
-целыми числами, дробями и многочленами.</p>
-
-<h3>Как пользоваться:</h3>
-<ol>
-<li>Выберите категорию модуля во вкладках слева</li>
-<li>Нажмите на кнопку с названием нужного модуля</li>
-<li>Введите данные в поля ввода согласно описанию модуля</li>
-<li>Нажмите кнопку «Вычислить» для получения результата</li>
-<li>Используйте черновик для сохранения промежуточных результатов</li>
-</ol>
-
-<h3>Особенности ввода:</h3>
-<ul>
-<li><b>Дроби:</b> формат «a/b» (например: «3/4», «-14/3»)</li>
-<li><b>Многочлены:</b> стандартная форма (например: «x^3+2/5x^2+3x+4»)</li>
-</ul>
-
-<h3>Черновик:</h3>
-<ul>
-<li>Текст сохраняется при переключении между модулями</li>
-<li>Кнопка «Копировать результат в черновик» — быстрое сохранение</li>
-</ul>
-
-<h3>Темы оформления:</h3>
-<p>Переключайтесь между светлой и тёмной темой кнопкой в левой панели.</p>
-    )";
-
-    QMessageBox box;
-    box.setWindowTitle("Справка");
-    box.setText(helpText);
-    box.setTextFormat(Qt::RichText);
-    box.setIcon(QMessageBox::Information);
-    box.setStyleSheet(isDark ? Theme::dark : Theme::light);
-    box.exec();
-}
-
-// ─────────────────────────────────────────────
-//  Вывод результата с обрезкой длинных строк
-// ─────────────────────────────────────────────
-static void displayResult(QTextEdit* field, const std::string& result, const QString& modName) {
-    constexpr size_t MAX_DISPLAY = 2000;
-    constexpr size_t MAX_LEN     = 100000;
-
-    if (result.size() > MAX_LEN) {
-        QString fileName = "result_" + QDateTime::currentDateTime().toString("yyyyMMdd_hhmmss") + ".txt";
-        QString filePath = QDir::currentPath() + "/" + fileName;
-        QFile f(filePath);
-        if (f.open(QIODevice::WriteOnly | QIODevice::Text)) {
-            QTextStream out(&f);
-            out << QString::fromStdString(result);
-        }
-        std::string shortened = result.substr(0, MAX_DISPLAY)
-            + "\n...\n(Полная версия сохранена в файл: " + filePath.toStdString() + ")";
-        field->setPlainText(QString::fromStdString(shortened));
-    } else {
-        field->setPlainText(QString::fromStdString(result));
+static NodePtr fullSimplify(const NodePtr& t){
+    NodePtr c=t;
+    for(int i=0;i<6;++i){
+        NodePtr n=sortFactors(simplifyTree(collectLikeTerms(simplifyTree(c))));
+        if(treeToPostfixStr(n)==treeToPostfixStr(c)) break;
+        c=n;
     }
+    return c;
 }
 
-// ─────────────────────────────────────────────
-//  Построение интерфейса модуля (правая панель)
-// ─────────────────────────────────────────────
-static void showModuleInterface(
-        QVBoxLayout*  moduleLayout,
-        QLabel*       titleLabel,
-        QTextEdit*    draftField,
-        QPushButton*  copyBtn,
-        const Module& mod)
-{
-    // Очистка предыдущего содержимого
-    while (moduleLayout->count() > 0) {
-        QLayoutItem* item = moduleLayout->takeAt(0);
-        if (item->widget()) item->widget()->deleteLater();
-        delete item;
-    }
+// ── Справка (диалог) ─────────────────────────────────────────────────────────
+static void showHelp(){
+    QDialog* d=new QDialog();
+    d->setWindowTitle("Справка — синтаксис формул");
+    d->resize(560,520);
+    d->setStyleSheet(isDark?Theme::dark:Theme::light);
+    auto* L=new QVBoxLayout(d);
+    auto* sc=new QScrollArea(); sc->setWidgetResizable(true);
+    auto* w=new QWidget(); auto* vl=new QVBoxLayout(w); vl->setContentsMargins(16,12,16,12); vl->setSpacing(10);
 
-    titleLabel->setText(mod.name);
+    auto T=[&](const QString& s){ auto* l=new QLabel(s); l->setStyleSheet("font-size:13px;font-weight:bold;color:#007acc;margin-top:6px;"); vl->addWidget(l); };
+    auto P=[&](const QString& s){ auto* l=new QLabel(s); l->setWordWrap(true); l->setStyleSheet("font-size:12px;"); vl->addWidget(l); };
+    auto C=[&](const QString& s){ auto* l=new QLabel(s); l->setFont(QFont("Monospace",11)); l->setStyleSheet("background:#252526;color:#9cdcfe;padding:8px;border-radius:4px;border:1px solid #3e3e42;"); l->setTextInteractionFlags(Qt::TextSelectableByMouse); vl->addWidget(l); };
 
-    // Описание
-    if (!mod.description.isEmpty()) {
-        auto* desc = new QLabel(mod.description);
-        desc->setWordWrap(true);
-        desc->setAlignment(Qt::AlignLeft | Qt::AlignTop);
-        QFont f = desc->font(); f.setItalic(true); desc->setFont(f);
-        desc->setStyleSheet("color:#666; background:rgba(255,255,255,0.7); padding:8px; border-radius:4px;");
-        moduleLayout->addWidget(desc);
-        moduleLayout->addSpacing(10);
+    T("Операции");
+    C("x + y      сложение\nx - y      вычитание\nx * y      умножение\nx / y      деление\nx ^ y      степень  (правоассоциативно: x^y^z = x^(y^z))");
+    T("Функции");
+    C("sin(x)     cos(x)     tan(x)     cot(x)\nsqrt(x)    квадратный корень\nexp(x)     показательная  e^x\nlog(a, x)  логарифм по основанию a");
+    T("Числа");
+    C("3          целое\n-7         отрицательное\n3/4        дробное\nx, y, t    переменные (любые буквы)");
+    T("Примеры формул");
+    C("sin(x) + 3*x^2\nlog(2, x) + x^2 - x^2\nexp(x) * cos(x)\nsqrt(x^2 + y^2)\n(x + 1) / (x^2 - 1)\nx^(3/2)");
+    T("Что делает кнопка «Вычислить»");
+    P("Вычисляет производную введённой формулы по выбранной переменной и автоматически упрощает результат:\nМ9 (0-слагаемые, 1-множители) + М12 (подобные) + М13 (сортировка множителей).");
+    vl->addStretch();
+    sc->setWidget(w);
+    L->addWidget(sc);
+    auto* ok=new QPushButton("Закрыть"); ok->setFixedWidth(100);
+    QObject::connect(ok,&QPushButton::clicked,d,&QDialog::accept);
+    auto* br=new QHBoxLayout(); br->addStretch(); br->addWidget(ok);
+    L->addLayout(br);
+    d->exec();
+    delete d;
+}
+
+// ── Вкладка «Дифференцирование» ──────────────────────────────────────────────
+static QWidget* buildDiffTab(QTextEdit* draft, QPushButton* copyBtn){
+    auto* outer=new QTabWidget();
+
+    // ── Подвкладка «Вычислить» ──────────────────────────────────────────────
+    {
+        auto* w=new QWidget();
+        auto* L=new QVBoxLayout(w); L->setContentsMargins(20,20,20,20); L->setSpacing(14);
+
+        // Строка: поле + кнопка справки
+        auto* topRow=new QHBoxLayout();
+        auto* formulaEdit=new QLineEdit();
+        formulaEdit->setPlaceholderText("Введите формулу, например:  sin(x) + 3*x^2");
+        formulaEdit->setFont(QFont("Monospace",12));
+        formulaEdit->setMinimumHeight(38);
+        topRow->addWidget(formulaEdit,1);
+        auto* helpBtn=new QPushButton("?");
+        helpBtn->setFixedSize(38,38);
+        helpBtn->setStyleSheet(
+            "QPushButton{background:#e6a800;color:#1e1e1e;border:none;border-radius:4px;font-size:16px;font-weight:bold;}"
+            "QPushButton:hover{background:#ffbf00;}");
+        helpBtn->setToolTip("Справка по синтаксису");
+        QObject::connect(helpBtn,&QPushButton::clicked,[](){ showHelp(); });
+        topRow->addWidget(helpBtn);
+        L->addLayout(topRow);
+
+        // Строка: переменная
+        auto* varRow=new QHBoxLayout();
+        varRow->addWidget(new QLabel("Переменная для d/dx:"));
+        auto* varEdit=new QLineEdit("x"); varEdit->setMaximumWidth(60); varEdit->setMinimumHeight(32);
+        varRow->addWidget(varEdit); varRow->addStretch();
+        L->addWidget(new QLabel("")); // небольшой отступ уже есть
+        L->addLayout(varRow);
+
+        // Результат
+        auto* resLbl=new QLabel("Производная (упрощённая):");
+        resLbl->setStyleSheet("font-size:12px; color:#888;");
+        L->addWidget(resLbl);
+        auto* resultField=new QTextEdit();
+        resultField->setReadOnly(true);
+        resultField->setFont(QFont("Monospace",13));
+        resultField->setMinimumHeight(80);
+        resultField->setMaximumHeight(120);
+        L->addWidget(resultField);
+
+        // Кнопка
+        auto* calcBtn=new QPushButton("▶   Вычислить производную");
+        calcBtn->setMinimumHeight(44);
+        calcBtn->setStyleSheet(
+            "QPushButton{background:#007acc;color:#fff;border:none;border-radius:5px;font-size:14px;font-weight:bold;}"
+            "QPushButton:hover{background:#005a9e;}"
+            "QPushButton:pressed{background:#003f6b;}");
+        L->addWidget(calcBtn);
+        L->addStretch();
+
+        auto compute=[=](){
+            std::string expr=formulaEdit->text().trimmed().toStdString();
+            std::string var =varEdit->text().trimmed().toStdString();
+            if(expr.empty()){showErr("Введите формулу");return;}
+            if(var.empty()) var="x";
+            try{
+                NodePtr tree=parseInfix(expr);
+                NodePtr diff=differentiate(tree,var);
+                NodePtr res =fullSimplify(diff);
+                std::string s=treeToStringPriority(res);
+                setResult(resultField,s);
+                copyBtn->disconnect();
+                QObject::connect(copyBtn,&QPushButton::clicked,[=](){
+                    auto d=draft->toPlainText();
+                    if(!d.isEmpty()) d+="\n\n";
+                    draft->setPlainText(d+"d/dx["+formulaEdit->text()+"]="+resultField->toPlainText());
+                });
+            } catch(const std::exception& e){ showErr(e.what()); resultField->clear(); }
+        };
+
+        QObject::connect(calcBtn,&QPushButton::clicked,compute);
+        QObject::connect(formulaEdit,&QLineEdit::returnPressed,compute);
+
+        outer->addTab(w,"▶  Вычислить");
     }
 
-    // Поля ввода
-    QVector<QLineEdit*> inputs;
-    for (int i = 0; i < mod.inputCount; ++i) {
-        moduleLayout->addWidget(new QLabel(QString("Число %1:").arg(i + 1)));
-        auto* field = new QLineEdit();
-        moduleLayout->addWidget(field);
-        inputs.append(field);
+    // ── Подвкладка «Инструменты» ─────────────────────────────────────────────
+    {
+        auto* w=new QWidget();
+        auto* L=new QVBoxLayout(w); L->setContentsMargins(12,12,12,12); L->setSpacing(10);
+
+        auto* ig=new QGroupBox("Формула");
+        auto* igl=new QVBoxLayout(ig);
+        auto* fEdit=new QLineEdit(); fEdit->setPlaceholderText("Введите формулу..."); fEdit->setFont(QFont("Monospace",11));
+        igl->addWidget(fEdit);
+        auto* vr=new QHBoxLayout(); vr->addWidget(new QLabel("Переменная d/dx:"));
+        auto* vEdit=new QLineEdit("x"); vEdit->setMaximumWidth(55); vr->addWidget(vEdit); vr->addStretch();
+        igl->addLayout(vr);
+        L->addWidget(ig);
+
+        auto* rg=new QGroupBox("Результат");
+        auto* rgl=new QVBoxLayout(rg);
+        auto* rf=new QTextEdit(); rf->setReadOnly(true); rf->setFont(QFont("Monospace",10)); rf->setMaximumHeight(65);
+        rgl->addWidget(rf);
+        L->addWidget(rg);
+
+        auto run=[=](const QString& mod){
+            std::string expr=fEdit->text().trimmed().toStdString();
+            std::string var =vEdit->text().trimmed().toStdString();
+            if(expr.empty()){showErr("Введите формулу");return;}
+            if(var.empty()) var="x";
+            try{
+                NodePtr t=parseInfix(expr); std::string res;
+                if(mod=="М1: Префикс")            res=infixToPrefix(expr);
+                else if(mod=="М4: Постфикс")       res=treeToPostfixStr(t);
+                else if(mod=="М6: Полные скобки")  res=treeToFullString(t);
+                else if(mod=="М7: Ассоциативность")res=treeToStringAssoc(t);
+                else if(mod=="М8: Приоритет")      res=treeToStringPriority(t);
+                else if(mod=="М3: d/dx")           res=treeToStringPriority(differentiate(t,var));
+                else if(mod=="М9: Упростить")      res=treeToStringPriority(simplifyTree(t));
+                else if(mod=="М9+М12+М13")         res=treeToStringPriority(fullSimplify(t));
+                else if(mod=="М12: Подобные")      res=treeToStringPriority(collectLikeTerms(t));
+                else if(mod=="М13: Сортировка")    res=treeToStringPriority(sortFactors(t));
+                setResult(rf,res);
+                copyBtn->disconnect();
+                QObject::connect(copyBtn,&QPushButton::clicked,[=](){
+                    auto d=draft->toPlainText(); if(!d.isEmpty()) d+="\n\n";
+                    draft->setPlainText(d+"["+mod+"|"+fEdit->text()+"]: "+rf->toPlainText());
+                });
+            } catch(const std::exception& e){ showErr(e.what()); }
+        };
+
+        struct G { QString name; QVector<QString> btns; };
+        QVector<G> groups={
+            {"Запись",      {"М1: Префикс","М4: Постфикс","М6: Полные скобки"}},
+            {"Скобки",      {"М7: Ассоциативность","М8: Приоритет"}},
+            {"Упрощение",   {"М9: Упростить","М12: Подобные","М13: Сортировка","М9+М12+М13"}},
+            {"Дифференц.",  {"М3: d/dx"}},
+        };
+        for(auto& g:groups){
+            auto* grp=new QGroupBox(g.name); auto* gl=new QHBoxLayout(grp); gl->setSpacing(6);
+            for(auto& b:g.btns){ auto* btn=new QPushButton(b); gl->addWidget(btn); QObject::connect(btn,&QPushButton::clicked,[=](){ run(b); }); }
+            L->addWidget(grp);
+        }
+        L->addStretch();
+        outer->addTab(w,"⚙  Инструменты");
     }
 
-    // Поле результата
-    moduleLayout->addWidget(new QLabel("Результат:"));
-    auto* resultField = new QTextEdit();
-    resultField->setReadOnly(true);
-    resultField->setMaximumHeight(100);
-    resultField->setLineWrapMode(QTextEdit::WidgetWidth);
-    resultField->setVerticalScrollBarPolicy(Qt::ScrollBarAsNeeded);
-    moduleLayout->addWidget(resultField);
-
-    // Кнопка вычисления
-    auto* calcBtn = new QPushButton("Вычислить");
-    moduleLayout->addWidget(calcBtn);
-
-    // Переподключаем «копировать результат»
-    copyBtn->disconnect();
-    QObject::connect(copyBtn, &QPushButton::clicked, [=]() {
-        const QString res = resultField->toPlainText();
-        if (res.isEmpty()) return;
-        QString draft = draftField->toPlainText();
-        if (!draft.isEmpty()) draft += "\n\n";
-        draft += "[" + mod.name + "]: " + res;
-        draftField->setPlainText(draft);
-        QTextCursor c = draftField->textCursor();
-        c.movePosition(QTextCursor::End);
-        draftField->setTextCursor(c);
-    });
-
-    // ─────────────────────────────────────────
-    //  Обработчик кнопки «Вычислить»
-    // ─────────────────────────────────────────
-    QObject::connect(calcBtn, &QPushButton::clicked, [=]() {
-        try {
-            QVector<std::string> in;
-            for (auto* f : inputs) in.append(f->text().toStdString());
-
-            std::string result;
-            const QString& name = mod.name;
-
-            // ── Натуральные и 0 ──────────────────────────────────────
-            if (name == "Сравнение натуральных") {
-                Validator::validateNaturalNumber(in[0]);
-                Validator::validateNaturalNumber(in[1]);
-                Natural a(in[0]), b(in[1]);
-                result = std::string(1, a.cmp(&b) + '0');
-
-            } else if (name == "Проверка на 0") {
-                Validator::validateNaturalNumber(in[0]);
-                Natural a(in[0]);
-                result = (a != 0) ? "1" : "0";
-
-            } else if (name == "Добавление 1") {
-                Validator::validateNaturalNumber(in[0]);
-                Natural a(in[0]);
-                ++a;
-                result = a.toString();
-
-            } else if (name == "Сложение натуральных") {
-                Validator::validateNaturalNumber(in[0]);
-                Validator::validateNaturalNumber(in[1]);
-                result = (Natural(in[0]) + Natural(in[1])).toString();
-
-            } else if (name == "Вычитание меньшего") {
-                Validator::validateNaturalNumber(in[0]);
-                Validator::validateNaturalNumber(in[1]);
-                result = (Natural(in[0]) - Natural(in[1])).toString();
-
-            } else if (name == "Умножение на цифру") {
-                Validator::validateNaturalNumber(in[0]);
-                Validator::validateNaturalNumber(in[1]);
-                if (in[1].size() != 1)
-                    throw UniversalStringException("Второй аргумент — одна цифра (0–9)");
-                result = (Natural(in[0]) * (size_t)(in[1][0] - '0')).toString();
-
-            } else if (name == "Умножение на 10^k") {
-                Validator::validateNaturalNumber(in[0]);
-                Validator::validateNaturalNumber(in[1]);
-                if (in[1].size() > 20)
-                    throw UniversalStringException("Показатель k слишком большой");
-                result = Natural(in[0]).multiplyByPowerOfTen(std::stoull(in[1])).toString();
-
-            } else if (name == "Умножение натуральных") {
-                Validator::validateNaturalNumber(in[0]);
-                Validator::validateNaturalNumber(in[1]);
-                result = (Natural(in[0]) * Natural(in[1])).toString();
-
-            } else if (name == "Вычитание умноженного") {
-                Validator::validateNaturalNumber(in[0]);
-                Validator::validateNaturalNumber(in[1]);
-                Validator::validateNaturalNumber(in[2]);
-                if (in[2].size() != 1)
-                    throw UniversalStringException("Третий аргумент — одна цифра (0–9)");
-                result = Natural(in[0]).subtractMultiplied(
-                    Natural(in[1]), (size_t)(in[2][0] - '0')).toString();
-
-            } else if (name == "Первая цифра деления") {
-                Validator::validateNaturalNumber(in[0]);
-                Validator::validateNaturalNumber(in[1]);
-                result = Natural(in[0]).getFirstDivisionDigit(Natural(in[1])).toString();
-
-            } else if (name == "Неполное частное") {
-                Validator::validateNaturalNumber(in[0]);
-                Validator::validateNaturalNumber(in[1]);
-                result = (Natural(in[0]) / Natural(in[1])).toString();
-
-            } else if (name == "Остаток от деления") {
-                Validator::validateNaturalNumber(in[0]);
-                Validator::validateNaturalNumber(in[1]);
-                result = (Natural(in[0]) % Natural(in[1])).toString();
-
-            } else if (name == "НОД") {
-                Validator::validateNaturalNumber(in[0]);
-                Validator::validateNaturalNumber(in[1]);
-                result = Natural::gcd(Natural(in[0]), Natural(in[1])).toString();
-
-            } else if (name == "НОК") {
-                Validator::validateNaturalNumber(in[0]);
-                Validator::validateNaturalNumber(in[1]);
-                result = Natural::lcm(Natural(in[0]), Natural(in[1])).toString();
-
-            // ── Целые ────────────────────────────────────────────────
-            } else if (name == "Абсолютная величина") {
-                Validator::validateIntegerNumber(in[0]);
-                result = Integer(in[0]).abs().toString();
-
-            } else if (name == "Положительность") {
-                Validator::validateIntegerNumber(in[0]);
-                result = std::string(1, Integer(in[0]).getSign() + '0');
-
-            } else if (name == "Умножение на -1") {
-                Validator::validateIntegerNumber(in[0]);
-                result = (-Integer(in[0])).toString();
-
-            } else if (name == "Натуральное в целое") {
-                Validator::validateNaturalNumber(in[0]);
-                result = Integer::fromNatural(Natural(in[0])).toString();
-
-            } else if (name == "Целое в натуральное") {
-                Validator::validateIntegerNumber(in[0]);
-                result = Integer(in[0]).toNatural().toString();
-
-            } else if (name == "Сложение целых чисел") {
-                Validator::validateIntegerNumber(in[0]);
-                Validator::validateIntegerNumber(in[1]);
-                result = (Integer(in[0]) + Integer(in[1])).toString();
-
-            } else if (name == "Вычитание целых чисел") {
-                Validator::validateIntegerNumber(in[0]);
-                Validator::validateIntegerNumber(in[1]);
-                result = (Integer(in[0]) - Integer(in[1])).toString();
-
-            } else if (name == "Умножение целых чисел") {
-                Validator::validateIntegerNumber(in[0]);
-                Validator::validateIntegerNumber(in[1]);
-                result = (Integer(in[0]) * Integer(in[1])).toString();
-
-            } else if (name == "Частное деления целых") {
-                Validator::validateIntegerNumber(in[0]);
-                Validator::validateIntegerNumber(in[1]);
-                result = (Integer(in[0]) / Integer(in[1])).toString();
-
-            } else if (name == "Остаток деления целых") {
-                Validator::validateIntegerNumber(in[0]);
-                Validator::validateIntegerNumber(in[1]);
-                result = (Integer(in[0]) % Integer(in[1])).toString();
-
-            // ── Дроби ────────────────────────────────────────────────
-            } else if (name == "Сокращение дроби") {
-                Validator::validateRationalNumber(in[0]);
-                Rational r(in[0]); r.reduce();
-                result = r.toString();
-
-            } else if (name == "Проверка на целое") {
-                Validator::validateRationalNumber(in[0]);
-                result = Rational(in[0]).isInteger() ? "true" : "false";
-
-            } else if (name == "Целое в дробное") {
-                Validator::validateIntegerNumber(in[0]);
-                result = Rational::fromInteger(Integer(in[0])).toString();
-
-            } else if (name == "Дробное в целое") {
-                Validator::validateRationalNumber(in[0]);
-                result = Rational(in[0]).toInteger().toString();
-
-            } else if (name == "Сложение дробей") {
-                Validator::validateRationalNumber(in[0]);
-                Validator::validateRationalNumber(in[1]);
-                result = (Rational(in[0]) + Rational(in[1])).toString();
-
-            } else if (name == "Вычитание дробей") {
-                Validator::validateRationalNumber(in[0]);
-                Validator::validateRationalNumber(in[1]);
-                result = (Rational(in[0]) - Rational(in[1])).toString();
-
-            } else if (name == "Умножение дробей") {
-                Validator::validateRationalNumber(in[0]);
-                Validator::validateRationalNumber(in[1]);
-                result = (Rational(in[0]) * Rational(in[1])).toString();
-
-            } else if (name == "Деление дробей") {
-                Validator::validateRationalNumber(in[0]);
-                Validator::validateRationalNumber(in[1]);
-                result = (Rational(in[0]) / Rational(in[1])).toString();
-
-            // ── Многочлены ───────────────────────────────────────────
-            } else if (name == "Сложение многочленов") {
-                result = (Polynom(Validator::validatePolynomial(in[0]))
-                        + Polynom(Validator::validatePolynomial(in[1]))).toString();
-
-            } else if (name == "Вычитание многочленов") {
-                result = (Polynom(Validator::validatePolynomial(in[0]))
-                        - Polynom(Validator::validatePolynomial(in[1]))).toString();
-
-            } else if (name == "Умножение на дробь") {
-                Validator::validateRationalNumber(in[1]);
-                result = (Polynom(Validator::validatePolynomial(in[0]))
-                        * Rational(in[1])).toString();
-
-            } else if (name == "Умножение на x^k") {
-                Validator::validateNaturalNumber(in[1]);
-                if (in[1].size() > 20)
-                    throw UniversalStringException("Показатель k слишком большой");
-                result = Polynom(Validator::validatePolynomial(in[0]))
-                            .multiplyByXPower(std::stoul(in[1])).toString();
-
-            } else if (name == "Старший коэффициент") {
-                result = Polynom(Validator::validatePolynomial(in[0]))
-                            .getLeadingCoefficient().toString();
-
-            } else if (name == "Степень многочлена") {
-                result = std::to_string(
-                    Polynom(Validator::validatePolynomial(in[0])).getDegree());
-
-            } else if (name == "НОК и НОД") {
-                result = Polynom(Validator::validatePolynomial(in[0])).factorOut().toString();
-
-            } else if (name == "Умножение многочленов") {
-                result = (Polynom(Validator::validatePolynomial(in[0]))
-                        * Polynom(Validator::validatePolynomial(in[1]))).toString();
-
-            } else if (name == "Частное деления") {
-                result = (Polynom(Validator::validatePolynomial(in[0]))
-                        / Polynom(Validator::validatePolynomial(in[1]))).toString();
-
-            } else if (name == "Остаток деления") {
-                result = (Polynom(Validator::validatePolynomial(in[0]))
-                        % Polynom(Validator::validatePolynomial(in[1]))).toString();
-
-            } else if (name == "НОД многочленов") {
-                result = Polynom::gcd(
-                    Polynom(Validator::validatePolynomial(in[0])),
-                    Polynom(Validator::validatePolynomial(in[1]))).toString();
-
-            } else if (name == "Производная") {
-                result = Polynom(Validator::validatePolynomial(in[0])).derivative().toString();
-
-            } else if (name == "Кратные в простые") {
-                result = Polynom(Validator::validatePolynomial(in[0])).makeSquareFree().toString();
-            }
-
-            displayResult(resultField, result, mod.name);
-
-        } catch (const UniversalStringException& e) {
-            showError(e.what());
-            resultField->clear();
-        }
-    });
-
-    moduleLayout->addStretch();
+    return outer;
 }
 
-// ─────────────────────────────────────────────
-//  main
-// ─────────────────────────────────────────────
-int main(int argc, char* argv[]) {
-    QApplication app(argc, argv);
+// ── Вкладка CAS ──────────────────────────────────────────────────────────────
+static QWidget* buildCasTab(QTextEdit* draft, QPushButton* copyBtn){
+    struct CM{ QString name,cat,desc; int inputs; };
+    const CM mods[]={
+        {"Сравнение натуральных","Натуральные","0=равны,1=меньше,2=больше",2},
+        {"Сложение натуральных","Натуральные","a+b",2},
+        {"Вычитание меньшего","Натуральные","a−b (a≥b)",2},
+        {"Умножение натуральных","Натуральные","a×b",2},
+        {"Неполное частное","Натуральные","⌊a/b⌋",2},
+        {"Остаток от деления","Натуральные","a mod b",2},
+        {"НОД","Натуральные","НОД(a,b)",2},
+        {"НОК","Натуральные","НОК(a,b)",2},
+        {"Абсолютная величина","Целые","|a|",1},
+        {"Сложение целых","Целые","a+b",2},
+        {"Вычитание целых","Целые","a−b",2},
+        {"Умножение целых","Целые","a×b",2},
+        {"Частное целых","Целые","⌊a/b⌋",2},
+        {"Остаток целых","Целые","a mod b",2},
+        {"Сокращение дроби","Дроби","Формат: -14/3",1},
+        {"Проверка на целое","Дроби","true/false",1},
+        {"Сложение дробей","Дроби","a/b+c/d",2},
+        {"Вычитание дробей","Дроби","a/b−c/d",2},
+        {"Умножение дробей","Дроби","a/b×c/d",2},
+        {"Деление дробей","Дроби","a/b÷c/d",2},
+        {"Сложение многочленов","Многочлены","P+Q",2},
+        {"Вычитание многочленов","Многочлены","P−Q",2},
+        {"Умножение на дробь","Многочлены","P×r",2},
+        {"Умножение многочленов","Многочлены","P×Q",2},
+        {"Частное деления","Многочлены","P div Q",2},
+        {"Остаток деления","Многочлены","P mod Q",2},
+        {"НОД многочленов","Многочлены","НОД(P,Q)",2},
+        {"Старший коэффициент","Многочлены","lc(P)",1},
+        {"Степень многочлена","Многочлены","deg(P)",1},
+        {"Производная","Многочлены","P'",1},
+        {"Кратные в простые","Многочлены","sqfree(P)",1},
+    };
+    int N=sizeof(mods)/sizeof(mods[0]);
 
-    QWidget window;
-    window.setWindowTitle("Калькулятор");
-    window.resize(800, 600);
+    auto* modArea=new QWidget(); auto* modL=new QVBoxLayout(modArea); modL->setAlignment(Qt::AlignTop);
+    modL->addWidget(new QLabel("← Выберите операцию"));
 
-    // Фоновое изображение (опционально)
-    QString bgStyle;
-    if (QFile::exists("background.jpg"))
-        bgStyle = "QWidget#mainWindow { background-image: url(background.jpg); background-position: center; }";
-
-    window.setObjectName("mainWindow");
-    window.setStyleSheet(bgStyle + Theme::dark);
-    bool isDark = true;
-
-    // ── Кнопки управления ───────────────────────────────────────────
-    auto* themeBtn = new QPushButton("Светлая тема");
-    themeBtn->setFixedSize(135, 35);
-    auto* helpBtn = new QPushButton("Справка");
-    helpBtn->setFixedSize(100, 35);
-
-    QObject::connect(themeBtn, &QPushButton::clicked, [&]() {
-        isDark = !isDark;
-        window.setStyleSheet(bgStyle + (isDark ? Theme::dark : Theme::light));
-        themeBtn->setText(isDark ? "Светлая тема" : "Тёмная тема");
-    });
-    QObject::connect(helpBtn, &QPushButton::clicked, [&]() { showHelp(isDark); });
-
-    // ── Список модулей ───────────────────────────────────────────────
-    const QVector<Module> modules = {
-        // Натуральные
-        {"Сравнение натуральных", "Натуральные и 0", 2, "Сравнение: 2 — первое больше, 0 — равны, 1 — первое меньше."},
-        {"Проверка на 0",         "Натуральные и 0", 1, "1 если число ≠ 0, иначе 0."},
-        {"Добавление 1",          "Натуральные и 0", 1, "Прибавить 1 к натуральному числу."},
-        {"Сложение натуральных",  "Натуральные и 0", 2, "Сложение натуральных чисел."},
-        {"Вычитание меньшего",    "Натуральные и 0", 2, "Вычитание меньшего из большего."},
-        {"Умножение на цифру",    "Натуральные и 0", 2, "Умножение числа на цифру 0–9 (второй аргумент)."},
-        {"Умножение на 10^k",     "Натуральные и 0", 2, "Умножение числа на 10^k (k — второй аргумент)."},
-        {"Умножение натуральных", "Натуральные и 0", 2, "Умножение двух натуральных чисел."},
-        {"Вычитание умноженного", "Натуральные и 0", 3, "a − b·c, где c — цифра (третий аргумент)."},
-        {"Первая цифра деления",  "Натуральные и 0", 2, "Первая цифра частного при делении a на b·10^k."},
-        {"Неполное частное",      "Натуральные и 0", 2, "Неполное частное от деления a на b."},
-        {"Остаток от деления",    "Натуральные и 0", 2, "Остаток от деления a на b."},
-        {"НОД",                   "Натуральные и 0", 2, "Наибольший общий делитель."},
-        {"НОК",                   "Натуральные и 0", 2, "Наименьшее общее кратное."},
-        // Целые
-        {"Абсолютная величина",   "Целые", 1, "Модуль целого числа (результат — натуральное)."},
-        {"Положительность",       "Целые", 1, "2 — положительное, 0 — ноль, 1 — отрицательное."},
-        {"Умножение на -1",       "Целые", 1, "Смена знака целого числа."},
-        {"Натуральное в целое",   "Целые", 1, "Преобразование натурального в целое."},
-        {"Целое в натуральное",   "Целые", 1, "Преобразование неотрицательного целого в натуральное."},
-        {"Сложение целых чисел",  "Целые", 2, "Сложение целых чисел."},
-        {"Вычитание целых чисел", "Целые", 2, "Вычитание целых чисел."},
-        {"Умножение целых чисел", "Целые", 2, "Умножение целых чисел."},
-        {"Частное деления целых", "Целые", 2, "Частное от деления a на b (b ≠ 0)."},
-        {"Остаток деления целых", "Целые", 2, "Остаток от деления a на b (b ≠ 0)."},
-        // Дроби
-        {"Сокращение дроби",  "Дроби", 1, "Ввод: «-14/3». Сокращение дроби."},
-        {"Проверка на целое", "Дроби", 1, "Ввод: «-14/3». true если знаменатель = 1."},
-        {"Целое в дробное",   "Дроби", 1, "Ввод: целое число. Результат: n/1."},
-        {"Дробное в целое",   "Дроби", 1, "Ввод: «-14/3». Только если знаменатель = 1."},
-        {"Сложение дробей",   "Дроби", 2, "Ввод: «-14/3». Сложение дробей."},
-        {"Вычитание дробей",  "Дроби", 2, "Ввод: «-14/3». Вычитание дробей."},
-        {"Умножение дробей",  "Дроби", 2, "Ввод: «-14/3». Умножение дробей."},
-        {"Деление дробей",    "Дроби", 2, "Ввод: «-14/3». Деление дробей (делитель ≠ 0)."},
-        // Многочлены
-        {"Сложение многочленов",   "Многочлены", 2, "Ввод: «x^3+2/5x^2+3x+4». Сложение."},
-        {"Вычитание многочленов",  "Многочлены", 2, "Ввод: «x^3+2/5x^2+3x+4». Вычитание."},
-        {"Умножение на дробь",     "Многочлены", 2, "Многочлен × рациональное число."},
-        {"Умножение на x^k",       "Многочлены", 2, "Второй аргумент — натуральное k или 0."},
-        {"Старший коэффициент",    "Многочлены", 1, "Ввод: «x^3+2/5x^2+3x+4». Старший коэффициент."},
-        {"Степень многочлена",     "Многочлены", 1, "Ввод: «x^3+2/5x^2+3x+4». Степень."},
-        {"НОК и НОД",              "Многочлены", 1, "Вынесение НОК знаменателей и НОД числителей."},
-        {"Умножение многочленов",  "Многочлены", 2, "Ввод: «x^3+2/5x^2+3x+4». Умножение."},
-        {"Частное деления",        "Многочлены", 2, "Частное при делении с остатком."},
-        {"Остаток деления",        "Многочлены", 2, "Остаток при делении с остатком."},
-        {"НОД многочленов",        "Многочлены", 2, "НОД двух многочленов."},
-        {"Производная",            "Многочлены", 1, "Ввод: «x^3+2/5x^2+3x+4». Производная."},
-        {"Кратные в простые",      "Многочлены", 1, "Преобразование: кратные корни → простые."},
+    auto buildPanel=[=](const CM& m){
+        while(modL->count()){ auto* i=modL->takeAt(0); if(i->widget()) i->widget()->deleteLater(); delete i; }
+        auto* t=new QLabel(m.name); QFont f=t->font(); f.setBold(true); f.setPointSize(13); t->setFont(f); modL->addWidget(t);
+        auto* dd=new QLabel(m.desc); dd->setStyleSheet("color:#888;font-style:italic;"); modL->addWidget(dd);
+        modL->addSpacing(8);
+        QVector<QLineEdit*> ins;
+        for(int i=0;i<m.inputs;++i){ modL->addWidget(new QLabel(QString("Аргумент %1:").arg(i+1))); auto* le=new QLineEdit(); modL->addWidget(le); ins.append(le); }
+        modL->addSpacing(6); modL->addWidget(new QLabel("Результат:"));
+        auto* rf=new QTextEdit(); rf->setReadOnly(true); rf->setMaximumHeight(75);
+        modL->addWidget(rf);
+        auto* btn=new QPushButton("Вычислить"); modL->addWidget(btn); modL->addStretch();
+        copyBtn->disconnect();
+        QObject::connect(copyBtn,&QPushButton::clicked,[=](){ auto d=draft->toPlainText(); if(!d.isEmpty()) d+="\n\n"; draft->setPlainText(d+"["+m.name+"]: "+rf->toPlainText()); });
+        QObject::connect(btn,&QPushButton::clicked,[=](){
+            try{
+                QVector<std::string> in; for(auto* le:ins) in.append(le->text().toStdString());
+                std::string res; const QString& n=m.name;
+                if(n=="Сравнение натуральных"){ Natural b(in[1]); res=std::string(1,Natural(in[0]).cmp(&b)+'0'); }
+                else if(n=="Сложение натуральных")  res=(Natural(in[0])+Natural(in[1])).toString();
+                else if(n=="Вычитание меньшего")    res=(Natural(in[0])-Natural(in[1])).toString();
+                else if(n=="Умножение натуральных") res=(Natural(in[0])*Natural(in[1])).toString();
+                else if(n=="Неполное частное")      res=(Natural(in[0])/Natural(in[1])).toString();
+                else if(n=="Остаток от деления")    res=(Natural(in[0])%Natural(in[1])).toString();
+                else if(n=="НОД")                   res=Natural::gcd(Natural(in[0]),Natural(in[1])).toString();
+                else if(n=="НОК")                   res=Natural::lcm(Natural(in[0]),Natural(in[1])).toString();
+                else if(n=="Абсолютная величина")   res=Integer(in[0]).abs().toString();
+                else if(n=="Сложение целых")        res=(Integer(in[0])+Integer(in[1])).toString();
+                else if(n=="Вычитание целых")       res=(Integer(in[0])-Integer(in[1])).toString();
+                else if(n=="Умножение целых")       res=(Integer(in[0])*Integer(in[1])).toString();
+                else if(n=="Частное целых")         res=(Integer(in[0])/Integer(in[1])).toString();
+                else if(n=="Остаток целых")         res=(Integer(in[0])%Integer(in[1])).toString();
+                else if(n=="Сокращение дроби")      { Rational r(in[0]); r.reduce(); res=r.toString(); }
+                else if(n=="Проверка на целое")     res=Rational(in[0]).isInteger()?"true":"false";
+                else if(n=="Сложение дробей")       res=(Rational(in[0])+Rational(in[1])).toString();
+                else if(n=="Вычитание дробей")      res=(Rational(in[0])-Rational(in[1])).toString();
+                else if(n=="Умножение дробей")      res=(Rational(in[0])*Rational(in[1])).toString();
+                else if(n=="Деление дробей")        res=(Rational(in[0])/Rational(in[1])).toString();
+                else if(n=="Сложение многочленов")  res=(Polynom(Validator::validatePolynomial(in[0]))+Polynom(Validator::validatePolynomial(in[1]))).toString();
+                else if(n=="Вычитание многочленов") res=(Polynom(Validator::validatePolynomial(in[0]))-Polynom(Validator::validatePolynomial(in[1]))).toString();
+                else if(n=="Умножение на дробь")    res=(Polynom(Validator::validatePolynomial(in[0]))*Rational(in[1])).toString();
+                else if(n=="Умножение многочленов") res=(Polynom(Validator::validatePolynomial(in[0]))*Polynom(Validator::validatePolynomial(in[1]))).toString();
+                else if(n=="Частное деления")       res=(Polynom(Validator::validatePolynomial(in[0]))/Polynom(Validator::validatePolynomial(in[1]))).toString();
+                else if(n=="Остаток деления")       res=(Polynom(Validator::validatePolynomial(in[0]))%Polynom(Validator::validatePolynomial(in[1]))).toString();
+                else if(n=="НОД многочленов")       res=Polynom::gcd(Polynom(Validator::validatePolynomial(in[0])),Polynom(Validator::validatePolynomial(in[1]))).toString();
+                else if(n=="Старший коэффициент")   res=Polynom(Validator::validatePolynomial(in[0])).getLeadingCoefficient().toString();
+                else if(n=="Степень многочлена")    res=std::to_string(Polynom(Validator::validatePolynomial(in[0])).getDegree());
+                else if(n=="Производная")           res=Polynom(Validator::validatePolynomial(in[0])).derivative().toString();
+                else if(n=="Кратные в простые")     res=Polynom(Validator::validatePolynomial(in[0])).makeSquareFree().toString();
+                setResult(rf,res);
+            } catch(const UniversalStringException& e){ showErr(e.what()); }
+              catch(const std::exception& e){ showErr(e.what()); }
+        });
     };
 
-    // ── Компоновка ───────────────────────────────────────────────────
-    auto* mainLayout = new QHBoxLayout(&window);
+    auto* tabs=new QTabWidget(); tabs->setFixedWidth(230);
+    QVector<QString> cats;
+    for(int i=0;i<N;++i) if(!cats.contains(mods[i].cat)) cats.append(mods[i].cat);
+    for(const QString& cat:cats){
+        auto* sc=new QScrollArea(); sc->setWidgetResizable(true);
+        auto* iw=new QWidget(); auto* vb=new QVBoxLayout(iw); vb->setAlignment(Qt::AlignTop);
+        for(int i=0;i<N;++i){
+            if(mods[i].cat!=cat) continue;
+            auto* b=new QPushButton(mods[i].name); b->setStyleSheet("text-align:left;padding-left:8px;");
+            vb->addWidget(b);
+            const CM& ref=mods[i];
+            QObject::connect(b,&QPushButton::clicked,[=](){ buildPanel(ref); });
+        }
+        sc->setWidget(iw); tabs->addTab(sc,cat);
+    }
+    auto* sp=new QSplitter(Qt::Horizontal); sp->addWidget(tabs); sp->addWidget(modArea);
+    sp->setStretchFactor(0,0); sp->setStretchFactor(1,1);
+    auto* w=new QWidget(); auto* l=new QHBoxLayout(w); l->setContentsMargins(0,0,0,0); l->addWidget(sp);
+    return w;
+}
 
-    // Левая панель
-    auto* leftPanel = new QWidget();
-    leftPanel->setFixedWidth(260);
-    auto* leftLayout = new QVBoxLayout(leftPanel);
+// ── main ─────────────────────────────────────────────────────────────────────
+int main(int argc, char* argv[]){
+    QApplication app(argc,argv);
+    QWidget window;
+    window.setWindowTitle("CAS — Система компьютерной алгебры");
+    window.resize(980,660);
+    window.setStyleSheet(Theme::dark);
 
-    auto* controlRow = new QHBoxLayout();
-    controlRow->addWidget(themeBtn);
-    controlRow->addWidget(helpBtn);
-    leftLayout->addLayout(controlRow);
-    leftLayout->addSpacing(10);
+    auto* rootL=new QVBoxLayout(&window); rootL->setContentsMargins(0,0,0,0); rootL->setSpacing(0);
 
-    auto* tabs = new QTabWidget();
-    tabs->setStyleSheet("QTabBar::scroller { width: 80px; }");
-    leftLayout->addWidget(tabs);
+    // Топбар
+    auto* top=new QWidget(); top->setFixedHeight(44); top->setStyleSheet("background:#007acc;");
+    auto* topL=new QHBoxLayout(top); topL->setContentsMargins(14,0,14,0);
+    auto* titLbl=new QLabel("⟨CAS⟩  Система компьютерной алгебры"); titLbl->setStyleSheet("color:#fff;font-size:14px;font-weight:bold;");
+    topL->addWidget(titLbl); topL->addStretch();
+    auto* themeBtn=new QPushButton("☀  Светлая тема");
+    themeBtn->setStyleSheet("background:#005a9e;color:#fff;border:none;padding:5px 12px;border-radius:3px;");
+    themeBtn->setFixedHeight(30); topL->addWidget(themeBtn);
+    rootL->addWidget(top);
 
-    // Правая панель
-    auto* rightArea   = new QWidget();
-    auto* rightLayout = new QVBoxLayout(rightArea);
+    // Сплиттер
+    auto* split=new QSplitter(Qt::Horizontal);
 
-    auto* titleLabel = new QLabel("Выберите модуль");
-    titleLabel->setAlignment(Qt::AlignCenter);
-    QFont tf = titleLabel->font(); tf.setPointSize(16); tf.setBold(true);
-    titleLabel->setFont(tf);
-    rightLayout->addWidget(titleLabel);
-
-    auto* moduleArea   = new QWidget();
-    auto* moduleLayout = new QVBoxLayout(moduleArea);
-    moduleLayout->setAlignment(Qt::AlignTop);
-    rightLayout->addWidget(moduleArea);
+    // Две главные вкладки
+    auto* mainTabs=new QTabWidget();
 
     // Черновик
-    rightLayout->addSpacing(10);
-    rightLayout->addWidget(new QLabel("Черновик:"));
-    auto* draftField = new QTextEdit();
-    draftField->setPlaceholderText("Введите текст — он сохранится между модулями...");
-    draftField->setLineWrapMode(QTextEdit::WidgetWidth);
-    draftField->setAcceptRichText(false);
-    draftField->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
-    draftField->setMinimumHeight(150);
-    rightLayout->addWidget(draftField, 1);
+    auto* draftW=new QWidget(); draftW->setMinimumWidth(180); draftW->setMaximumWidth(250);
+    auto* draftL=new QVBoxLayout(draftW); draftL->setContentsMargins(6,10,10,10);
+    auto* dtitle=new QLabel("📋  Черновик"); dtitle->setStyleSheet("font-weight:bold;"); draftL->addWidget(dtitle);
+    auto* draftField=new QTextEdit(); draftField->setPlaceholderText("Промежуточные результаты...");
+    draftL->addWidget(draftField,1);
+    auto* copyBtn=new QPushButton("← Копировать");
+    auto* clearBtn=new QPushButton("🗑  Очистить");
+    draftL->addWidget(copyBtn); draftL->addWidget(clearBtn);
+    QObject::connect(clearBtn,&QPushButton::clicked,draftField,&QTextEdit::clear);
 
-    auto* draftRow   = new QHBoxLayout();
-    auto* clearBtn   = new QPushButton("Очистить черновик");
-    auto* copyBtn    = new QPushButton("Копировать результат в черновик");
-    draftRow->addWidget(clearBtn);
-    draftRow->addWidget(copyBtn);
-    draftRow->addStretch();
-    rightLayout->addLayout(draftRow);
+    mainTabs->addTab(buildDiffTab(draftField,copyBtn), "∫  Дифференцирование");
+    mainTabs->addTab(buildCasTab(draftField,copyBtn),  "№  CAS");
 
-    QObject::connect(clearBtn, &QPushButton::clicked, [=]() { draftField->clear(); });
+    split->addWidget(mainTabs); split->addWidget(draftW);
+    split->setStretchFactor(0,1); split->setStretchFactor(1,0);
+    split->setSizes({760,210});
+    rootL->addWidget(split,1);
 
-    // ── Генерация вкладок ────────────────────────────────────────────
-    QVector<QString> categories;
-    for (const auto& m : modules)
-        if (!categories.contains(m.category)) categories.append(m.category);
-
-    for (const QString& cat : categories) {
-        auto* tab       = new QWidget();
-        auto* tabLayout = new QVBoxLayout(tab);
-
-        auto* catLabel = new QLabel(cat);
-        catLabel->setAlignment(Qt::AlignCenter);
-        QFont cf = catLabel->font(); cf.setBold(true); catLabel->setFont(cf);
-        tabLayout->addWidget(catLabel);
-
-        for (const Module& m : modules) {
-            if (m.category != cat) continue;
-            auto* btn = new QPushButton(m.name);
-            tabLayout->addWidget(btn);
-            QObject::connect(btn, &QPushButton::clicked, [=]() {
-                showModuleInterface(moduleLayout, titleLabel, draftField, copyBtn, m);
-            });
-        }
-        tabLayout->addStretch();
-        tabs->addTab(tab, cat);
-    }
-
-    mainLayout->addWidget(leftPanel);
-    mainLayout->addWidget(rightArea);
+    QObject::connect(themeBtn,&QPushButton::clicked,[&](){
+        isDark=!isDark;
+        window.setStyleSheet(isDark?Theme::dark:Theme::light);
+        themeBtn->setText(isDark?"☀  Светлая тема":"🌙  Тёмная тема");
+    });
 
     window.show();
     return app.exec();
